@@ -19,8 +19,7 @@ body {
 a { color: var(--accent); }
 
 .app {
-  display: grid;
-  grid-template-columns: 380px 1fr;
+  display: flex;
   height: 100%;
 }
 
@@ -31,6 +30,26 @@ a { color: var(--accent); }
   gap: 12px;
   border-right: 1px solid var(--border);
   overflow-y: auto;
+  width: 380px;
+  min-width: 280px;
+  max-width: 600px;
+  position: relative;
+}
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: ew-resize;
+  background: transparent;
+  z-index: 10;
+}
+
+.resize-handle:hover {
+  background: var(--accent);
+  opacity: 0.3;
 }
 
 .panel {
@@ -52,6 +71,7 @@ a { color: var(--accent); }
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex: 1;
 }
 
 .preview-wrap {

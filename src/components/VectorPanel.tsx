@@ -52,12 +52,27 @@ export default function VectorPanel() {
       pixels: new Uint8ClampedArray(id.data),
       width: id.width,
       height: id.height,
-      cellSize: Math.max(1, Math.floor(params.vectorDetail)),
+      cellSize: Math.max(1, params.vectorDetail),
       minIsland: Math.max(1, Math.floor(params.minIsland)),
       technique: params.technique,
       groups: payloadGroups
     })
   }
+
+  const isDraggingSlider = useApp(s=>s.isDraggingSlider)
+
+  // Auto-generate when groups or params change (with debouncing, but not when dragging sliders)
+  useEffect(() => {
+    if (!imageBitmap || !groups.length || !groups.some(g=>g.chipIds.length)) return
+    if (isDraggingSlider) return // Skip auto-generation while dragging sliders
+    
+    const timer = setTimeout(() => {
+      generate()
+    }, 500) // 500ms debounce
+
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, params, imageBitmap, isDraggingSlider])
 
   const setTechnique = useApp(s=>s.setTechnique)
   const setVectorResolution = useApp(s=>s.setVectorResolution)
@@ -69,22 +84,22 @@ export default function VectorPanel() {
       <h3>Vectorization</h3>
       <div className="col">
         <div className="row" role="radiogroup" aria-label="Technique">
-          <label><input type="radio" name="tech" checked={params.technique==='contours'} onChange={()=>setTechnique('contours')} /> Contours (paths)</label>
-          <label style={{marginLeft:12}}><input type="radio" name="tech" checked={params.technique==='rect_runs'} onChange={()=>setTechnique('rect_runs')} /> Rect runs (cells)</label>
+          <label title="Generate smooth curved paths around color regions. Best for organic shapes and detailed artwork"><input type="radio" name="tech" checked={params.technique==='contours'} onChange={()=>setTechnique('contours')} /> Contours (paths)</label>
+          <label style={{marginLeft:12}} title="Generate rectangular blocks for each color region. Best for pixel art and geometric designs"><input type="radio" name="tech" checked={params.technique==='rect_runs'} onChange={()=>setTechnique('rect_runs')} /> Rect runs (cells)</label>
         </div>
         <div className="input-row">
-          <label className="small">Vector resolution (max dim)</label>
-          <input className="slider" type="range" min={256} max={4096} step={64} value={params.vectorResolution} onChange={e=>setVectorResolution(parseInt(e.target.value))} />
+          <label className="small" title="Maximum width or height of the internal raster used for vectorization. Higher values = more detail but slower processing">Vector resolution (max dim)</label>
+          <input className="slider" type="range" min={256} max={4096} step={64} value={params.vectorResolution} onChange={e=>setVectorResolution(parseInt(e.target.value))} title="Maximum width or height of the internal raster used for vectorization. Higher values = more detail but slower processing" />
           <div className="small">{params.vectorResolution}px</div>
         </div>
         <div className="input-row">
-          <label className="small">Vector detail (cell size)</label>
-          <input className="slider" type="range" min={1} max={16} value={params.vectorDetail} onChange={e=>setVectorDetail(parseInt(e.target.value))} />
+          <label className="small" title="Size of each grid cell used for vectorization. Smaller values = more detailed vectors but larger file size">Vector detail (cell size)</label>
+          <input className="slider" type="range" min={1} max={16} value={params.vectorDetail} onChange={e=>setVectorDetail(parseInt(e.target.value))} title="Size of each grid cell used for vectorization. Smaller values = more detailed vectors but larger file size" />
           <div className="small">{params.vectorDetail}px</div>
         </div>
         <div className="input-row">
-          <label className="small">Min island (cells)</label>
-          <input className="slider" type="range" min={1} max={128} value={params.minIsland} onChange={e=>setMinIsland(parseInt(e.target.value))} />
+          <label className="small" title="Minimum size of color regions to keep. Smaller islands will be removed to clean up the vector">Min island (cells)</label>
+          <input className="slider" type="range" min={1} max={128} value={params.minIsland} onChange={e=>setMinIsland(parseInt(e.target.value))} title="Minimum size of color regions to keep. Smaller islands will be removed to clean up the vector" />
           <div className="small">{params.minIsland}</div>
         </div>
 

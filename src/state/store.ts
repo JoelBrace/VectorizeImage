@@ -23,6 +23,8 @@ export interface AppState {
   activeSwatch: string | null
   recolorMap: Record<string,string>
   islandRecolorMode: boolean
+  
+  isDraggingSlider: boolean
 
   status: StatusMessage | null
 
@@ -50,6 +52,7 @@ export interface AppState {
   setActiveSwatch(hex: string | null): void
   setRecolorMap(map: Record<string,string>): void
   setIslandRecolorMode(enabled: boolean): void
+  setIsDraggingSlider(dragging: boolean): void
 }
 
 export const useApp = create<AppState>((set, get) => ({
@@ -67,7 +70,7 @@ export const useApp = create<AppState>((set, get) => ({
     vectorDetail: 2,
     minIsland: 4
   },
-  similarityPct: 50,
+  similarityPct: 15,
   maxColors: 24,
   sampleStep: 4,
 
@@ -79,6 +82,8 @@ export const useApp = create<AppState>((set, get) => ({
   activeSwatch: null,
   recolorMap: {},
   islandRecolorMode: false,
+  
+  isDraggingSlider: false,
 
   status: null,
 
@@ -149,13 +154,24 @@ export const useApp = create<AppState>((set, get) => ({
   },
   moveChip(chipId, fromGroupId, toGroupId) {
     const groups = get().groups.map(g => ({...g}))
+    const chips = get().chips
+    const chipById = Object.fromEntries(chips.map(c => [c.id, c]))
+    
     if (fromGroupId) {
       const g = groups.find(g=>g.id===fromGroupId)
       if (g) g.chipIds = g.chipIds.filter(id=>id!==chipId)
     }
     if (toGroupId) {
       const g = groups.find(g=>g.id===toGroupId)
-      if (g && !g.chipIds.includes(chipId)) g.chipIds.push(chipId)
+      if (g && !g.chipIds.includes(chipId)) {
+        const wasEmpty = g.chipIds.length === 0
+        g.chipIds.push(chipId)
+        // Update representative color if group was empty
+        if (wasEmpty && chipById[chipId]) {
+          g.repHex = chipById[chipId].hex
+          g.repLab = { L: chipById[chipId].L, a: chipById[chipId].a, b: chipById[chipId].b }
+        }
+      }
     }
     get().setGroups(groups)
   },
@@ -170,4 +186,5 @@ export const useApp = create<AppState>((set, get) => ({
   setActiveSwatch(hex) { set({ activeSwatch: hex }) },
   setRecolorMap(map) { set({ recolorMap: map }) },
   setIslandRecolorMode(enabled) { set({ islandRecolorMode: enabled }) },
+  setIsDraggingSlider(dragging) { set({ isDraggingSlider: dragging }) },
 }))

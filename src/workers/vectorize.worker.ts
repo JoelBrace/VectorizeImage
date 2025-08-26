@@ -21,7 +21,7 @@ export type WorkerResponse =
   | { type: 'generated', svg: string, width:number, height:number, backgroundHex:string, areaByGroup: Record<string, number> }
 
 // eslint-disable-next-line no-restricted-globals
-const ctx: DedicatedWorkerGlobalScope = self as any
+const ctx = self as any
 
 function postStatus(stage: string, detail?: string) { ctx.postMessage({ type: 'status', stage, detail } as WorkerResponse) }
 

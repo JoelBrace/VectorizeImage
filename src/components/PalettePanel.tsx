@@ -27,6 +27,7 @@ export default function PalettePanel() {
   const setStatus = useApp(s=>s.setStatus)
   const setAutoGroups = useApp(s=>s.setAutoGroups)
   const setGroups = useApp(s=>s.setGroups)
+  const setIsDraggingSlider = useApp(s=>s.setIsDraggingSlider)
 
   // Extract & Group
   const extract = async () => {
@@ -58,7 +59,7 @@ export default function PalettePanel() {
         const countById: Record<string, number> = Object.fromEntries(chipsForGroup.map(c=>[c.id,c.count]))
         const withShare = msg.groups.map((g:any)=>({
           ...g,
-          share: (g.chipIds.reduce((a:string[],id:string)=>a + (countById[id]||0), 0)) / sum
+          share: (g.chipIds.reduce((a:number,id:string)=>a + (countById[id]||0), 0)) / sum
         }))
         setGroups(withShare)
         setStatus(null)
@@ -67,17 +68,43 @@ export default function PalettePanel() {
     w.postMessage({ type: 'autogroup', chips: chipsForGroup, similarityPct })
   }
 
-  // Regroup when slider changes
+  // Extract when maxColors or sampleStep changes (immediate)
+  useEffect(()=>{
+    if (!imageBitmap) return
+    const t = setTimeout(()=> extract(), 200)
+    return ()=> clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maxColors, sampleStep])
+
+  // Regroup when similarity changes (immediate)
   useEffect(()=>{
     if (!chips.length) return
     const t = setTimeout(()=> autoGroup(chips), 200)
     return ()=> clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [similarityPct, maxColors, sampleStep])
+  }, [similarityPct])
 
   const setMax = useApp(s=>s.setMaxColors)
   const setStep = useApp(s=>s.setSampleStep)
   const setSim = useApp(s=>s.setSimilarity)
+
+  const handleSliderMouseDown = () => {
+    setIsDraggingSlider(true)
+  }
+
+  const handleSliderMouseUp = () => {
+    setIsDraggingSlider(false)
+  }
+
+  // Add global mouse up listener to handle release outside slider
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      setIsDraggingSlider(false)
+    }
+    
+    document.addEventListener('mouseup', handleGlobalMouseUp)
+    return () => document.removeEventListener('mouseup', handleGlobalMouseUp)
+  }, [setIsDraggingSlider])
 
   return (
     <div className="panel" aria-label="Color extraction and grouping">
@@ -87,18 +114,18 @@ export default function PalettePanel() {
       </div>
       <div className="col" style={{marginTop:8}}>
         <div className="input-row">
-          <label className="small">Max colors</label>
-          <input className="slider" type="range" min={8} max={64} value={maxColors} onChange={e=>setMax(parseInt(e.target.value))} />
+          <label className="small" title="Maximum number of unique colors to extract from the image">Max colors</label>
+          <input className="slider" type="range" min={2} max={128} value={maxColors} onChange={e=>setMax(parseInt(e.target.value))} onMouseDown={handleSliderMouseDown} onMouseUp={handleSliderMouseUp} title="Maximum number of unique colors to extract from the image" />
           <div className="small">{maxColors}</div>
         </div>
         <div className="input-row">
-          <label className="small">Sampling Step</label>
-          <input className="slider" type="range" min={1} max={16} value={sampleStep} onChange={e=>setStep(parseInt(e.target.value))} />
+          <label className="small" title="How many pixels to skip when sampling colors. Higher values = faster extraction but less accuracy">Sampling Step</label>
+          <input className="slider" type="range" min={1} max={16} value={sampleStep} onChange={e=>setStep(parseInt(e.target.value))} onMouseDown={handleSliderMouseDown} onMouseUp={handleSliderMouseUp} title="How many pixels to skip when sampling colors. Higher values = faster extraction but less accuracy" />
           <div className="small">{sampleStep}</div>
         </div>
         <div className="input-row">
-          <label className="small">Similarity %</label>
-          <input className="slider" type="range" min={0} max={100} value={similarityPct} onChange={e=>setSim(parseInt(e.target.value))} />
+          <label className="small" title="How similar colors need to be to get grouped together. Lower values = more groups with similar colors">Similarity %</label>
+          <input className="slider" type="range" min={0} max={100} value={similarityPct} onChange={e=>setSim(parseInt(e.target.value))} onMouseDown={handleSliderMouseDown} onMouseUp={handleSliderMouseUp} title="How similar colors need to be to get grouped together. Lower values = more groups with similar colors" />
           <div className="small">{similarityPct}%</div>
         </div>
       </div>
