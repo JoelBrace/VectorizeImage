@@ -95,7 +95,25 @@ export const useApp = create<AppState>((set, get) => ({
   status: null,
 
   setImage(meta, bmp) {
-    set({ imageMeta: meta, imageBitmap: bmp, svg: null, recolorMap: {}, recolorHistory: [], activeSwatch: null })
+    set({ 
+      imageMeta: meta, 
+      imageBitmap: bmp, 
+      svg: null, 
+      recolorMap: {}, 
+      recolorHistory: [], 
+      activeSwatch: null,
+      params: {
+        technique: 'contours',
+        vectorResolution: 1024,
+        vectorDetail: 2,
+        minIsland: 4
+      },
+      similarityPct: 15,
+      maxColors: 24,
+      sampleStep: 4,
+      extractionMode: 'frequency',
+      islandRecolorMode: false
+    })
   },
   clearImage() {
     const meta = get().imageMeta

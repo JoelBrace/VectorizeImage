@@ -16,6 +16,12 @@ export default function SvgPreview() {
   const { svgWidth, svgHeight } = useApp()
 
   const ref = useRef<HTMLDivElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+  
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
+  const [zoomLevel, setZoomLevel] = useState(1)
+  const [isPanning, setIsPanning] = useState(false)
+  const [lastPanPoint, setLastPanPoint] = useState({ x: 0, y: 0 })
 
   // Render SVG string
   useEffect(()=>{
@@ -33,6 +39,91 @@ export default function SvgPreview() {
       })
     }
   }, [svg])
+
+  // Reset pan and zoom when new SVG is loaded
+  useEffect(() => {
+    setPanOffset({ x: 0, y: 0 })
+    setZoomLevel(1)
+  }, [svg])
+
+  // Pan functionality
+  const onMouseDown = (e: React.MouseEvent) => {
+    // Left click - only pan if no active swatch
+    if (e.button === 0) {
+      if (activeSwatch) return // Don't pan when in recolor mode
+      setIsPanning(true)
+      setLastPanPoint({ x: e.clientX, y: e.clientY })
+    }
+    // Middle click - always allow panning
+    else if (e.button === 1) {
+      e.preventDefault() // Prevent default middle click behavior
+      setIsPanning(true)
+      setLastPanPoint({ x: e.clientX, y: e.clientY })
+    }
+  }
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!isPanning) return
+    
+    const deltaX = e.clientX - lastPanPoint.x
+    const deltaY = e.clientY - lastPanPoint.y
+    
+    setPanOffset(prev => ({
+      x: prev.x + deltaX,
+      y: prev.y + deltaY
+    }))
+    
+    setLastPanPoint({ x: e.clientX, y: e.clientY })
+  }
+
+  const onMouseUp = () => {
+    setIsPanning(false)
+  }
+
+  // Zoom functionality
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault()
+    
+    const delta = e.deltaY > 0 ? 0.9 : 1.1
+    const newZoom = Math.max(0.1, Math.min(5, zoomLevel * delta))
+    
+    // Calculate zoom center point relative to the stage
+    if (stageRef.current && ref.current) {
+      const stageRect = stageRef.current.getBoundingClientRect()
+      const innerRect = ref.current.getBoundingClientRect()
+      
+      // Mouse position relative to stage
+      const mouseX = e.clientX - stageRect.left
+      const mouseY = e.clientY - stageRect.top
+      
+      // Current position of SVG content relative to mouse
+      const contentMouseX = (mouseX - panOffset.x) / zoomLevel
+      const contentMouseY = (mouseY - panOffset.y) / zoomLevel
+      
+      // Calculate new pan offset to keep content under mouse
+      const newPanX = mouseX - contentMouseX * newZoom
+      const newPanY = mouseY - contentMouseY * newZoom
+      
+      setPanOffset({ x: newPanX, y: newPanY })
+    }
+    
+    setZoomLevel(newZoom)
+  }
+
+  const zoomIn = () => {
+    const newZoom = Math.min(5, zoomLevel * 1.2)
+    setZoomLevel(newZoom)
+  }
+
+  const zoomOut = () => {
+    const newZoom = Math.max(0.1, zoomLevel * 0.8)
+    setZoomLevel(newZoom)
+  }
+
+  const resetView = () => {
+    setPanOffset({ x: 0, y: 0 })
+    setZoomLevel(1)
+  }
 
   const onSwatchClick = (hex:string)=>{
     setActiveSwatch(hex === activeSwatch ? null : hex)
@@ -87,7 +178,11 @@ export default function SvgPreview() {
   }
 
   const onSvgClick = (e: React.MouseEvent) => {
+    // Only handle left clicks for recoloring
+    if (e.button !== 0) return
     if (!activeSwatch) return
+    if (isPanning) return // Don't recolor if we were just panning
+    
     const target = e.target as SVGElement
     if (!target) return
     const fill = target.getAttribute('fill') || 'none'
@@ -165,11 +260,37 @@ export default function SvgPreview() {
             })}
           </div>
         </div>
+        <div className="zoom-controls" style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
+          <button className="btn" onClick={zoomOut} disabled={!svg} title="Zoom out">−</button>
+          <span className="small" style={{minWidth: '40px', textAlign: 'center'}}>{Math.round(zoomLevel * 100)}%</span>
+          <button className="btn" onClick={zoomIn} disabled={!svg} title="Zoom in">+</button>
+          <button className="btn" onClick={resetView} disabled={!svg} title="Reset view" style={{marginLeft: '4px'}}>⌂</button>
+        </div>
         <button className="btn" onClick={onUndo} disabled={!canUndo() || !svg} title="Undo last recolor change">Undo</button>
         <button className="btn" onClick={download} disabled={!svg}>Download SVG</button>
       </div>
-      <div className="svg-stage" onClick={onSvgClick} role="region" aria-label="SVG preview">
-        <div className="svg-stage-inner" ref={ref}></div>
+      <div 
+        className="svg-stage" 
+        ref={stageRef}
+        role="region" 
+        aria-label="SVG preview"
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+        onWheel={onWheel}
+        onContextMenu={(e) => e.preventDefault()} // Prevent right-click menu
+        style={{cursor: isPanning ? 'grabbing' : activeSwatch ? 'crosshair' : 'grab'}}
+      >
+        <div 
+          className="svg-stage-inner" 
+          ref={ref}
+          onClick={onSvgClick}
+          style={{
+            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+            transformOrigin: '0 0'
+          }}
+        ></div>
       </div>
     </div>
   )

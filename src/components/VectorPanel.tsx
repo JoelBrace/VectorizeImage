@@ -103,9 +103,6 @@ export default function VectorPanel() {
           <div className="small">{params.minIsland}</div>
         </div>
 
-        <div className="row" style={{marginTop:8}}>
-          <button className="btn primary" onClick={generate}>Generate SVG</button>
-        </div>
       </div>
     </div>
   )
