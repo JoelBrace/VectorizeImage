@@ -9,6 +9,8 @@ export default function SvgPreview() {
   const setActiveSwatch = useApp(s=>s.setActiveSwatch)
   const setRecolorMap = useApp(s=>s.setRecolorMap)
   const recolorMap = useApp(s=>s.recolorMap)
+  const islandRecolorMode = useApp(s=>s.islandRecolorMode)
+  const setIslandRecolorMode = useApp(s=>s.setIslandRecolorMode)
   const { svgWidth, svgHeight } = useApp()
 
   const ref = useRef<HTMLDivElement>(null)
@@ -40,12 +42,32 @@ export default function SvgPreview() {
     if (!target) return
     const fill = target.getAttribute('fill')
     if (!fill || fill === activeSwatch) return
-    // recolor: replace all shapes with this fill to active swatch
+    
     const svgEl = ref.current?.querySelector('svg')
     if (!svgEl) return
-    const shapes = svgEl.querySelectorAll(`[fill="${fill}"]`)
+    
+    let shapes: NodeListOf<Element>
+    let recolorKey: string
+    
+    if (islandRecolorMode) {
+      // Island mode: only recolor shapes with same fill AND same island ID
+      const islandId = target.getAttribute('data-island-id')
+      if (islandId) {
+        shapes = svgEl.querySelectorAll(`[fill="${fill}"][data-island-id="${islandId}"]`)
+        recolorKey = `${fill}:${islandId}` // Use combined key for island-specific recoloring
+      } else {
+        // Fallback if no island ID (shouldn't happen with new SVGs)
+        shapes = svgEl.querySelectorAll(`[fill="${fill}"]`)
+        recolorKey = fill
+      }
+    } else {
+      // Global mode: recolor all shapes with this fill (original behavior)
+      shapes = svgEl.querySelectorAll(`[fill="${fill}"]`)
+      recolorKey = fill
+    }
+    
     shapes.forEach(el => el.setAttribute('fill', activeSwatch))
-    setRecolorMap({ ...recolorMap, [fill]: activeSwatch })
+    setRecolorMap({ ...recolorMap, [recolorKey]: activeSwatch })
   }
 
   const download = () => {
@@ -74,6 +96,15 @@ export default function SvgPreview() {
             })}
           </div>
         </div>
+        <label className="checkbox-label" style={{display: 'flex', alignItems: 'center', marginRight: '8px'}}>
+          <input 
+            type="checkbox" 
+            checked={islandRecolorMode} 
+            onChange={(e) => setIslandRecolorMode(e.target.checked)}
+            style={{marginRight: '4px'}}
+          />
+          <span style={{fontSize: '12px', whiteSpace: 'nowrap'}}>Island mode</span>
+        </label>
         <button className="btn" onClick={download} disabled={!svg}>Download SVG</button>
       </div>
       <div className="svg-stage" onClick={onSvgClick} role="region" aria-label="SVG preview">

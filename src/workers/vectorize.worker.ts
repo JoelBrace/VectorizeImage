@@ -5,6 +5,7 @@ import { islandCleanup } from './algorithms/cc'
 import { rectRuns, rectRunsToSvg } from './algorithms/rectruns'
 import { contoursSvgForAllLabels } from './algorithms/contours'
 import { hexToLab, toHexFromLab } from './algorithms/color'
+import { identifyIslands } from './algorithms/islands'
 
 export type WorkerRequest =
   | { type: 'extract', pixels: Uint8ClampedArray, width: number, height: number, step: number, maxColors: number }
@@ -59,13 +60,18 @@ ctx.onmessage = (ev: MessageEvent<WorkerRequest>) => {
     for (let i=0;i<areaByIndex.length;i++) if (areaByIndex[i] > maxA) { maxA = areaByIndex[i]; bgIndex = i }
     const fillByIndex = (i:number)=> groupReps[i].hex
     const backgroundHex = fillByIndex(bgIndex)
+    
+    // Identify islands for recoloring support
+    postStatus('Identifying islands...')
+    const islandInfo = identifyIslands(lab.labels, lab.w, lab.h)
+    
     postStatus('Emitting SVG...')
     let svg = ''
     if (technique === 'rect_runs') {
-      const runs = rectRuns(lab.labels, lab.w, lab.h, cellSize, fillByIndex, bgIndex)
+      const runs = rectRuns(lab.labels, lab.w, lab.h, cellSize, fillByIndex, bgIndex, islandInfo.islandIds)
       svg = rectRunsToSvg(runs, width, height, backgroundHex)
     } else {
-      svg = contoursSvgForAllLabels(lab.labels, lab.w, lab.h, cellSize, fillByIndex, bgIndex, width, height)
+      svg = contoursSvgForAllLabels(lab.labels, lab.w, lab.h, cellSize, fillByIndex, bgIndex, width, height, islandInfo.islandIds, islandInfo.islandsByLabel)
     }
     const areaByGroup: Record<string, number> = {}
     for (let i=0;i<groupReps.length;i++) areaByGroup[groupReps[i].id] = areaByIndex[i] || 0

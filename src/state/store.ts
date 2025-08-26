@@ -22,6 +22,7 @@ export interface AppState {
 
   activeSwatch: string | null
   recolorMap: Record<string,string>
+  islandRecolorMode: boolean
 
   status: StatusMessage | null
 
@@ -48,6 +49,7 @@ export interface AppState {
   setSvg(res: WorkerSvgResult): void
   setActiveSwatch(hex: string | null): void
   setRecolorMap(map: Record<string,string>): void
+  setIslandRecolorMode(enabled: boolean): void
 }
 
 export const useApp = create<AppState>((set, get) => ({
@@ -76,6 +78,7 @@ export const useApp = create<AppState>((set, get) => ({
 
   activeSwatch: null,
   recolorMap: {},
+  islandRecolorMode: false,
 
   status: null,
 
@@ -166,4 +169,5 @@ export const useApp = create<AppState>((set, get) => ({
   },
   setActiveSwatch(hex) { set({ activeSwatch: hex }) },
   setRecolorMap(map) { set({ recolorMap: map }) },
+  setIslandRecolorMode(enabled) { set({ islandRecolorMode: enabled }) },
 }))
