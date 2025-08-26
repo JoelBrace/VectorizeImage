@@ -1,4 +1,5 @@
 export type Technique = 'contours' | 'rect_runs'
+export type ExtractionMode = 'frequency' | 'diverse'
 
 export interface ImageMeta {
   width: number

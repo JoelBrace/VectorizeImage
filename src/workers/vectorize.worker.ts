@@ -8,7 +8,7 @@ import { hexToLab, toHexFromLab } from './algorithms/color'
 import { identifyIslands } from './algorithms/islands'
 
 export type WorkerRequest =
-  | { type: 'extract', pixels: Uint8ClampedArray, width: number, height: number, step: number, maxColors: number }
+  | { type: 'extract', pixels: Uint8ClampedArray, width: number, height: number, step: number, maxColors: number, extractionMode?: 'frequency' | 'diverse' }
   | { type: 'autogroup', chips: { id:string, hex:string, count:number, share:number }[], similarityPct: number }
   | { type: 'generate', pixels: Uint8ClampedArray, width:number, height:number, cellSize:number, minIsland:number,
       technique: 'contours'|'rect_runs',
@@ -29,7 +29,7 @@ ctx.onmessage = (ev: MessageEvent<WorkerRequest>) => {
   const msg = ev.data
   if (msg.type === 'extract') {
     postStatus('Sampling colors...')
-    const out = sampleColors(msg.pixels, msg.width, msg.height, { step: msg.step, maxColors: msg.maxColors })
+    const out = sampleColors(msg.pixels, msg.width, msg.height, { step: msg.step, maxColors: msg.maxColors, extractionMode: msg.extractionMode })
     const chips = makeChipsFromExtracted(out.colors)
     ctx.postMessage({ type: 'extracted', chips } as WorkerResponse)
     return

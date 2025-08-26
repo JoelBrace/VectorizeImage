@@ -252,3 +252,75 @@ kbd {
   border-radius: 6px;
   font-size: 11px;
 }
+
+/* Custom scrollbar styling to match app design */
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: var(--bg);
+  border-radius: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+  border: 1px solid var(--bg);
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  opacity: 0.6;
+}
+
+/* Firefox scrollbar styling */
+.sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--bg);
+}
+
+/* Radio button styles */
+.radio-group {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0b1220;
+  padding: 8px;
+}
+
+.radio-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.radio-label:hover {
+  background: var(--border);
+}
+
+.radio-label input[type="radio"] {
+  margin: 2px 0 0 0;
+  accent-color: var(--accent);
+}
+
+.radio-label span {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.radio-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 1px;
+}

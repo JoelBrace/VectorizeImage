@@ -9,6 +9,8 @@ export default function SvgPreview() {
   const setActiveSwatch = useApp(s=>s.setActiveSwatch)
   const setRecolorMap = useApp(s=>s.setRecolorMap)
   const recolorMap = useApp(s=>s.recolorMap)
+  const undoRecolor = useApp(s=>s.undoRecolor)
+  const canUndo = useApp(s=>s.canUndo)
   const islandRecolorMode = useApp(s=>s.islandRecolorMode)
   const setIslandRecolorMode = useApp(s=>s.setIslandRecolorMode)
   const { svgWidth, svgHeight } = useApp()
@@ -34,6 +36,54 @@ export default function SvgPreview() {
 
   const onSwatchClick = (hex:string)=>{
     setActiveSwatch(hex === activeSwatch ? null : hex)
+  }
+
+  const onUndo = () => {
+    if (!canUndo()) return
+    
+    const svgEl = ref.current?.querySelector('svg')
+    if (!svgEl) return
+    
+    // Get the current recolor map before undoing
+    const currentMap = recolorMap
+    
+    // Undo in the store first to get the previous state
+    undoRecolor()
+    
+    // We need to get the previous recolor map from the store after undo
+    // Since we're in a React component, we need to access it differently
+    // We'll revert the SVG elements to their original state and then reapply previous recolors
+    
+    // First, revert all shapes to their original colors
+    const shapes = svgEl.querySelectorAll('path,rect')
+    shapes.forEach(el => {
+      const originalFill = el.getAttribute('data-original-fill')
+      if (originalFill) {
+        el.setAttribute('fill', originalFill)
+      }
+    })
+    
+    // Then reapply any remaining recolors from the (now previous) state
+    // We need to wait for the next tick to get the updated recolorMap
+    setTimeout(() => {
+      const updatedMap = useApp.getState().recolorMap
+      Object.entries(updatedMap).forEach(([key, newColor]) => {
+        const fillValue = newColor === 'transparent' ? 'none' : newColor
+        
+        if (key.includes(':')) {
+          // Island mode key format: "fill:islandId"
+          const [fill, islandId] = key.split(':')
+          const selector = fill === 'none' ? `[fill="${fill}"], :not([fill])` : `[fill="${fill}"]`
+          const shapes = svgEl.querySelectorAll(`${selector}[data-island-id="${islandId}"]`)
+          shapes.forEach(el => el.setAttribute('fill', fillValue))
+        } else {
+          // Global mode
+          const selector = key === 'none' ? `[fill="${key}"], :not([fill])` : `[fill="${key}"]`
+          const shapes = svgEl.querySelectorAll(selector)
+          shapes.forEach(el => el.setAttribute('fill', fillValue))
+        }
+      })
+    }, 0)
   }
 
   const onSvgClick = (e: React.MouseEvent) => {
@@ -115,6 +165,7 @@ export default function SvgPreview() {
             })}
           </div>
         </div>
+        <button className="btn" onClick={onUndo} disabled={!canUndo() || !svg} title="Undo last recolor change">Undo</button>
         <button className="btn" onClick={download} disabled={!svg}>Download SVG</button>
       </div>
       <div className="svg-stage" onClick={onSvgClick} role="region" aria-label="SVG preview">

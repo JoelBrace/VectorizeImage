@@ -1,5 +1,5 @@
 import create from 'zustand'
-import { ColorChip, ColorGroup, ImageMeta, StatusMessage, Technique, VectorParams, WorkerExtractResult, WorkerGroupResult, WorkerSvgResult } from './types'
+import { ColorChip, ColorGroup, ImageMeta, StatusMessage, Technique, ExtractionMode, VectorParams, WorkerExtractResult, WorkerGroupResult, WorkerSvgResult } from './types'
 
 export interface AppState {
   imageMeta: ImageMeta | null
@@ -14,6 +14,7 @@ export interface AppState {
   similarityPct: number
   maxColors: number
   sampleStep: number
+  extractionMode: ExtractionMode
 
   svg: string | null
   svgWidth: number
@@ -22,6 +23,7 @@ export interface AppState {
 
   activeSwatch: string | null
   recolorMap: Record<string,string>
+  recolorHistory: Record<string,string>[]
   islandRecolorMode: boolean
   
   isDraggingSlider: boolean
@@ -35,6 +37,7 @@ export interface AppState {
   setSimilarity(pct: number): void
   setMaxColors(n: number): void
   setSampleStep(n: number): void
+  setExtractionMode(mode: ExtractionMode): void
   setTechnique(t: Technique): void
   setVectorResolution(n: number): void
   setVectorDetail(n: number): void
@@ -51,6 +54,8 @@ export interface AppState {
   setSvg(res: WorkerSvgResult): void
   setActiveSwatch(hex: string | null): void
   setRecolorMap(map: Record<string,string>): void
+  undoRecolor(): void
+  canUndo(): boolean
   setIslandRecolorMode(enabled: boolean): void
   setIsDraggingSlider(dragging: boolean): void
 }
@@ -73,6 +78,7 @@ export const useApp = create<AppState>((set, get) => ({
   similarityPct: 15,
   maxColors: 24,
   sampleStep: 4,
+  extractionMode: 'frequency',
 
   svg: null,
   svgWidth: 0,
@@ -81,6 +87,7 @@ export const useApp = create<AppState>((set, get) => ({
 
   activeSwatch: null,
   recolorMap: {},
+  recolorHistory: [],
   islandRecolorMode: false,
   
   isDraggingSlider: false,
@@ -88,12 +95,12 @@ export const useApp = create<AppState>((set, get) => ({
   status: null,
 
   setImage(meta, bmp) {
-    set({ imageMeta: meta, imageBitmap: bmp, svg: null, recolorMap: {}, activeSwatch: null })
+    set({ imageMeta: meta, imageBitmap: bmp, svg: null, recolorMap: {}, recolorHistory: [], activeSwatch: null })
   },
   clearImage() {
     const meta = get().imageMeta
     if (meta) URL.revokeObjectURL(meta.objectUrl)
-    set({ imageMeta: null, imageBitmap: null, chips: [], groups: [], svg: null, recolorMap: {}, activeSwatch: null })
+    set({ imageMeta: null, imageBitmap: null, chips: [], groups: [], svg: null, recolorMap: {}, recolorHistory: [], activeSwatch: null })
   },
   setStatus(s) { set({ status: s }) },
 
@@ -102,6 +109,7 @@ export const useApp = create<AppState>((set, get) => ({
   },
   setMaxColors(n) { set({ maxColors: n }) },
   setSampleStep(n) { set({ sampleStep: n }) },
+  setExtractionMode(mode) { set({ extractionMode: mode }) },
   setTechnique(t) { set({ params: { ...get().params, technique: t } }) },
   setVectorResolution(n) { set({ params: { ...get().params, vectorResolution: n } }) },
   setVectorDetail(n) { set({ params: { ...get().params, vectorDetail: n } }) },
@@ -184,7 +192,32 @@ export const useApp = create<AppState>((set, get) => ({
     set({ svg: res.svg, svgWidth: res.width, svgHeight: res.height, backgroundHex: res.backgroundHex })
   },
   setActiveSwatch(hex) { set({ activeSwatch: hex }) },
-  setRecolorMap(map) { set({ recolorMap: map }) },
+  setRecolorMap(map) { 
+    const current = get()
+    // Only add to history if the recolor map actually changed
+    const hasChanged = JSON.stringify(current.recolorMap) !== JSON.stringify(map)
+    if (hasChanged) {
+      const newHistory = [...current.recolorHistory, current.recolorMap]
+      // Limit history to last 50 changes to prevent memory issues
+      if (newHistory.length > 50) {
+        newHistory.shift()
+      }
+      set({ recolorMap: map, recolorHistory: newHistory })
+    } else {
+      set({ recolorMap: map })
+    }
+  },
+  undoRecolor() {
+    const current = get()
+    if (current.recolorHistory.length > 0) {
+      const newHistory = [...current.recolorHistory]
+      const previousMap = newHistory.pop()!
+      set({ recolorMap: previousMap, recolorHistory: newHistory })
+    }
+  },
+  canUndo() {
+    return get().recolorHistory.length > 0
+  },
   setIslandRecolorMode(enabled) { set({ islandRecolorMode: enabled }) },
   setIsDraggingSlider(dragging) { set({ isDraggingSlider: dragging }) },
 }))

@@ -24,6 +24,7 @@ export default function PalettePanel() {
   const maxColors = useApp(s=>s.maxColors)
   const sampleStep = useApp(s=>s.sampleStep)
   const similarityPct = useApp(s=>s.similarityPct)
+  const extractionMode = useApp(s=>s.extractionMode)
   const setStatus = useApp(s=>s.setStatus)
   const setAutoGroups = useApp(s=>s.setAutoGroups)
   const setGroups = useApp(s=>s.setGroups)
@@ -43,7 +44,7 @@ export default function PalettePanel() {
         autoGroup(msg.chips)
       }
     }
-    w.postMessage({ type: 'extract', pixels: new Uint8ClampedArray(imageData.data), width: imageData.width, height: imageData.height, step: sampleStep, maxColors })
+    w.postMessage({ type: 'extract', pixels: new Uint8ClampedArray(imageData.data), width: imageData.width, height: imageData.height, step: sampleStep, maxColors, extractionMode })
   }
 
   const autoGroup = (chipsForGroup: ColorChip[]) => {
@@ -74,7 +75,7 @@ export default function PalettePanel() {
     const t = setTimeout(()=> extract(), 200)
     return ()=> clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [maxColors, sampleStep])
+  }, [maxColors, sampleStep, extractionMode])
 
   // Regroup when similarity changes (immediate)
   useEffect(()=>{
@@ -87,6 +88,7 @@ export default function PalettePanel() {
   const setMax = useApp(s=>s.setMaxColors)
   const setStep = useApp(s=>s.setSampleStep)
   const setSim = useApp(s=>s.setSimilarity)
+  const setExtractionMode = useApp(s=>s.setExtractionMode)
 
   const handleSliderMouseDown = () => {
     setIsDraggingSlider(true)
@@ -113,6 +115,33 @@ export default function PalettePanel() {
         <button className="btn primary" onClick={extract}>Extract & Group</button>
       </div>
       <div className="col" style={{marginTop:8}}>
+        <div className="radio-group" style={{marginBottom: 12}}>
+          <div className="small" style={{marginBottom: 4}}>Extraction method:</div>
+          <div className="radio-options">
+            <label className="radio-label">
+              <input 
+                type="radio" 
+                name="extractionMode" 
+                value="frequency" 
+                checked={extractionMode === 'frequency'}
+                onChange={(e) => setExtractionMode(e.target.value as 'frequency')}
+              />
+              <span>Frequency-based</span>
+              <div className="radio-hint">Most common colors first</div>
+            </label>
+            <label className="radio-label">
+              <input 
+                type="radio" 
+                name="extractionMode" 
+                value="diverse" 
+                checked={extractionMode === 'diverse'}
+                onChange={(e) => setExtractionMode(e.target.value as 'diverse')}
+              />
+              <span>Diversity-focused</span>
+              <div className="radio-hint">Prioritizes different colors</div>
+            </label>
+          </div>
+        </div>
         <div className="input-row">
           <label className="small" title="Maximum number of unique colors to extract from the image">Max colors</label>
           <input className="slider" type="range" min={2} max={128} value={maxColors} onChange={e=>setMax(parseInt(e.target.value))} onMouseDown={handleSliderMouseDown} onMouseUp={handleSliderMouseUp} title="Maximum number of unique colors to extract from the image" />
