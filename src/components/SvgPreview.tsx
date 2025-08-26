@@ -87,6 +87,15 @@ export default function SvgPreview() {
   return (
     <div className="preview">
       <div className="controls-row" aria-label="SVG editor controls">
+        <label className="checkbox-label" style={{display: 'flex', alignItems: 'center', marginRight: '8px', padding: '6px 8px', border: '1px solid var(--border)', borderRadius: '8px', background: '#0b1220'}}>
+          <input 
+            type="checkbox" 
+            checked={islandRecolorMode} 
+            onChange={(e) => setIslandRecolorMode(e.target.checked)}
+            style={{marginRight: '6px'}}
+          />
+          <span className="small">Island mode</span>
+        </label>
         <div className="row" style={{flex:1, overflow:'hidden'}}>
           <div className="small">Recolor:</div>
           <div className="swatches" role="listbox" aria-label="Group swatches">
@@ -96,15 +105,6 @@ export default function SvgPreview() {
             })}
           </div>
         </div>
-        <label className="checkbox-label" style={{display: 'flex', alignItems: 'center', marginRight: '8px'}}>
-          <input 
-            type="checkbox" 
-            checked={islandRecolorMode} 
-            onChange={(e) => setIslandRecolorMode(e.target.checked)}
-            style={{marginRight: '4px'}}
-          />
-          <span style={{fontSize: '12px', whiteSpace: 'nowrap'}}>Island mode</span>
-        </label>
         <button className="btn" onClick={download} disabled={!svg}>Download SVG</button>
       </div>
       <div className="svg-stage" onClick={onSvgClick} role="region" aria-label="SVG preview">
