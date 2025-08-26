@@ -67,15 +67,18 @@ ctx.onmessage = (ev: MessageEvent<WorkerRequest>) => {
     
     postStatus('Emitting SVG...')
     let svg = ''
+    // Use actual content dimensions instead of original image dimensions
+    const contentWidth = lab.w * cellSize
+    const contentHeight = lab.h * cellSize
     if (technique === 'rect_runs') {
       const runs = rectRuns(lab.labels, lab.w, lab.h, cellSize, fillByIndex, bgIndex, islandInfo.islandIds)
-      svg = rectRunsToSvg(runs, width, height, backgroundHex)
+      svg = rectRunsToSvg(runs, contentWidth, contentHeight, backgroundHex)
     } else {
-      svg = contoursSvgForAllLabels(lab.labels, lab.w, lab.h, cellSize, fillByIndex, bgIndex, width, height, islandInfo.islandIds, islandInfo.islandsByLabel)
+      svg = contoursSvgForAllLabels(lab.labels, lab.w, lab.h, cellSize, fillByIndex, bgIndex, contentWidth, contentHeight, islandInfo.islandIds, islandInfo.islandsByLabel)
     }
     const areaByGroup: Record<string, number> = {}
     for (let i=0;i<groupReps.length;i++) areaByGroup[groupReps[i].id] = areaByIndex[i] || 0
-    ctx.postMessage({ type: 'generated', svg, width, height, backgroundHex, areaByGroup } as WorkerResponse)
+    ctx.postMessage({ type: 'generated', svg, width: contentWidth, height: contentHeight, backgroundHex, areaByGroup } as WorkerResponse)
     return
   }
 }

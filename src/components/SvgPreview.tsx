@@ -40,8 +40,8 @@ export default function SvgPreview() {
     if (!activeSwatch) return
     const target = e.target as SVGElement
     if (!target) return
-    const fill = target.getAttribute('fill')
-    if (!fill || fill === activeSwatch) return
+    const fill = target.getAttribute('fill') || 'none'
+    if (fill === activeSwatch || (fill === 'none' && activeSwatch === 'transparent')) return
     
     const svgEl = ref.current?.querySelector('svg')
     if (!svgEl) return
@@ -53,20 +53,24 @@ export default function SvgPreview() {
       // Island mode: only recolor shapes with same fill AND same island ID
       const islandId = target.getAttribute('data-island-id')
       if (islandId) {
-        shapes = svgEl.querySelectorAll(`[fill="${fill}"][data-island-id="${islandId}"]`)
+        const selector = fill === 'none' ? `[fill="${fill}"], :not([fill])` : `[fill="${fill}"]`
+        shapes = svgEl.querySelectorAll(`${selector}[data-island-id="${islandId}"]`)
         recolorKey = `${fill}:${islandId}` // Use combined key for island-specific recoloring
       } else {
         // Fallback if no island ID (shouldn't happen with new SVGs)
-        shapes = svgEl.querySelectorAll(`[fill="${fill}"]`)
+        const selector = fill === 'none' ? `[fill="${fill}"], :not([fill])` : `[fill="${fill}"]`
+        shapes = svgEl.querySelectorAll(selector)
         recolorKey = fill
       }
     } else {
       // Global mode: recolor all shapes with this fill (original behavior)
-      shapes = svgEl.querySelectorAll(`[fill="${fill}"]`)
+      const selector = fill === 'none' ? `[fill="${fill}"], :not([fill])` : `[fill="${fill}"]`
+      shapes = svgEl.querySelectorAll(selector)
       recolorKey = fill
     }
     
-    shapes.forEach(el => el.setAttribute('fill', activeSwatch))
+    const fillValue = activeSwatch === 'transparent' ? 'none' : activeSwatch
+    shapes.forEach(el => el.setAttribute('fill', fillValue))
     setRecolorMap({ ...recolorMap, [recolorKey]: activeSwatch })
   }
 
@@ -99,6 +103,12 @@ export default function SvgPreview() {
         <div className="row" style={{flex:1, overflow:'hidden'}}>
           <div className="small">Recolor:</div>
           <div className="swatches" role="listbox" aria-label="Group swatches">
+            <div 
+              className={'swatch'+(activeSwatch==='transparent'?' active':'')} 
+              style={{background: 'repeating-linear-gradient(45deg, #ccc, #ccc 4px, #fff 4px, #fff 8px)', opacity: 0.8}} 
+              onClick={()=>onSwatchClick('transparent')} 
+              title="Transparent"
+            ></div>
             {groups.map(g=>{
               if (!g.chipIds.length) return null
               return <div key={g.id} className={'swatch'+(activeSwatch===g.repHex?' active':'')} style={{background:g.repHex}} onClick={()=>onSwatchClick(g.repHex)} title={`${g.name} ${g.repHex}`}></div>
